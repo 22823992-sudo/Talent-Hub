@@ -1,0 +1,38 @@
+
+yamlversion: '3.8'
+
+services:
+  talenthub-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: talenthub-rag-api
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - CHROMA_DB_DIR=/app/chroma_db
+      - CACHE_DIR=/app/cache
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./cache:/app/cache
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - talenthub-network
+
+networks:
+  talenthub-network:
+    driver: bridge
+
+volumes:
+  chroma_db:
+  cache:

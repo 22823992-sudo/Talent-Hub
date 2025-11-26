@@ -1,0 +1,38 @@
+
+txt# FastAPI y servidor
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# CORS
+python-multipart==0.0.6
+
+# RAG y LangChain
+langchain==0.0.340
+langchain-community==0.0.1
+
+# Embeddings y Transformers
+sentence-transformers==2.2.2
+transformers==4.35.2
+torch==2.1.1
+
+# Vector Database
+chromadb==0.4.18
+
+# Re-ranking
+cross-encoder==0.1.0
+
+# Utilidades
+numpy==1.24.3
+pandas==2.1.3
+
+# Variables de entorno
+python-dotenv==1.0.0
+
+# Testing (opcional)
+pytest==7.4.3
+pytest-cov==4.1.0
+httpx==0.25.2
+
+# Logging y monitoreo
+loguru==0.7.2
