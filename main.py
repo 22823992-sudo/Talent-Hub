@@ -90,6 +90,39 @@ print("✅ Sistema RAG inicializado\n")
 
 # ==================== FUNCIONES AUXILIARES ====================
 
+# ==================== FUNCIONES AUXILIARES ====================
+
+def flatten_metadata(metadata):
+    """Convierte metadata compleja a tipos simples para ChromaDB"""
+    flattened = {}
+    for key, value in metadata.items():
+        if isinstance(value, list):
+            flattened[key] = ", ".join(str(v) for v in value)
+        elif isinstance(value, dict):
+            flattened[key] = json.dumps(value)
+        elif isinstance(value, (str, int, float, bool)):
+            flattened[key] = value
+        else:
+            flattened[key] = str(value)
+    return flattened
+
+def parse_metadata(metadata):
+    """Convierte metadata de vuelta a su forma original"""
+    parsed = {}
+    for key, value in metadata.items():
+        if key in ['skills', 'workMode', 'certifications']:
+            # Convertir strings separados por coma de vuelta a listas
+            parsed[key] = [v.strip() for v in value.split(',') if v.strip()]
+        elif key == 'location':
+            # Parsear JSON de location
+            try:
+                parsed[key] = json.loads(value) if isinstance(value, str) else value
+            except:
+                parsed[key] = value
+        else:
+            parsed[key] = value
+    return parsed
+
 def create_profile_document(profile: Dict) -> str:
     """Convierte perfil en texto optimizado para embeddings"""
     text = f"""
@@ -150,7 +183,7 @@ def rerank_documents(query: str, docs: List[Document]) -> List[Document]:
     except Exception as e:
         print(f"⚠️ Error en re-ranking: {e}")
         return docs
-
+    
 def generate_response(query: str, docs: List[Document]) -> str:
     """Genera respuesta estructurada sin LLM"""
     if not docs:
@@ -159,16 +192,31 @@ def generate_response(query: str, docs: List[Document]) -> str:
     response = f"🎯 Encontré {len(docs)} profesionales relevantes para: '{query}'\n\n"
     
     for i, doc in enumerate(docs, 1):
-        prof = doc.metadata
+        # Parsear metadata primero
+        prof = parse_metadata(doc.metadata)
+        
+        # Extraer location de forma segura
+        location = prof.get('location', {})
+        city = location.get('city', 'Sin ciudad') if isinstance(location, dict) else 'Sin ciudad'
+        distance = location.get('distance', 0) if isinstance(location, dict) else 0
+        
+        # Extraer skills de forma segura
+        skills = prof.get('skills', [])
+        skills_str = ', '.join(skills[:5]) if isinstance(skills, list) else str(skills)
+        
+        # Extraer workMode de forma segura
+        work_mode = prof.get('workMode', [])
+        work_mode_str = ', '.join(work_mode) if isinstance(work_mode, list) else str(work_mode)
+        
         response += f"{'='*60}\n"
-        response += f"{i}. {prof['name']} - {prof['title']}\n"
-        response += f"   📍 Ubicación: {prof['location']['city']} ({prof['location']['distance']} km)\n"
-        response += f"   💼 Experiencia: {prof['experience']}\n"
-        response += f"   ⭐ Rating: {prof['rating']}/5.0\n"
-        response += f"   🔧 Skills principales: {', '.join(prof['skills'][:5])}\n"
-        response += f"   💰 Salario: ${prof['salary']}/mes\n"
-        response += f"   📅 Disponibilidad: {prof['availability']}\n"
-        response += f"   🏢 Modalidad: {', '.join(prof['workMode'])}\n\n"
+        response += f"{i}. {prof.get('name', 'Sin nombre')} - {prof.get('title', 'Sin título')}\n"
+        response += f"   📍 Ubicación: {city} ({distance} km)\n"
+        response += f"   💼 Experiencia: {prof.get('experience', 'N/A')}\n"
+        response += f"   ⭐ Rating: {prof.get('rating', 0)}/5.0\n"
+        response += f"   🔧 Skills principales: {skills_str}\n"
+        response += f"   💰 Salario: ${prof.get('salary', '0')}/mes\n"
+        response += f"   📅 Disponibilidad: {prof.get('availability', 'N/A')}\n"
+        response += f"   🏢 Modalidad: {work_mode_str}\n\n"
     
     return response
 
@@ -252,7 +300,7 @@ async def index_profile(profile: ProfileIndexRequest):
         
         doc = Document(
             page_content=text,
-            metadata=profile_dict
+            metadata=flatten_metadata(profile_dict) 
         )
         
         vectorstore.add_documents([doc])
@@ -275,7 +323,7 @@ async def index_profiles_batch(profiles: List[ProfileIndexRequest]):
         for profile in profiles:
             profile_dict = profile.dict()
             text = create_profile_document(profile_dict)
-            doc = Document(page_content=text, metadata=profile_dict)
+            doc = Document(page_content=text, metadata=flatten_metadata(profile_dict))
             documents.append(doc)
         
         vectorstore.add_documents(documents)
