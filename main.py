@@ -14,9 +14,9 @@ import hashlib
 import json
 
 # Imports para RAG
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import Chroma
-from langchain.schema import Document
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
 from sentence_transformers import CrossEncoder
 
 # ==================== CONFIGURACIÓN ====================
